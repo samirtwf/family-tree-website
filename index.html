@@ -219,6 +219,11 @@
     </form>
 
     <script>
+        // التحقق من دعم LocalStorage
+        if (typeof(Storage) === "undefined") {
+            alert('Sorry, your browser does not support local storage. Please upgrade your browser.');
+        }
+
         // البيانات مضمنة مباشرة هنا لتجنب مشاكل الوصول إلى الملف الخارجي
         const initialData = [
             { id: '1', name: 'محمود إبراهيم الفرس', birth: 'N/A', death: 'N/A', gender: 'ذكر', parentId: null, motherId: null },
@@ -233,7 +238,13 @@
             { id: '10', name: 'زينب حنفي محمود الرشيدي', birth: '01-01-1960', death: 'N/A', gender: 'أنثى', parentId: '3', motherId: null }
         ];
 
-        let people = JSON.parse(localStorage.getItem('familyTree')) || initialData;
+        let people = [];
+        try {
+            people = JSON.parse(localStorage.getItem('familyTree')) || initialData;
+        } catch (error) {
+            console.error("Error retrieving data from localStorage:", error);
+            people = initialData;
+        }
         let scale = 1;
 
         const tree = document.getElementById('tree');
@@ -274,7 +285,12 @@
                 people.push(person);
             }
 
-            localStorage.setItem('familyTree', JSON.stringify(people));
+            try {
+                localStorage.setItem('familyTree', JSON.stringify(people));
+            } catch (error) {
+                console.error("Error saving data to localStorage:", error);
+                alert('Failed to save data. Please check your browser settings.');
+            }
             this.reset();
             document.getElementById('editId').value = '';
             renderTree();
@@ -343,7 +359,12 @@
                     if (p.parentId === id) p.parentId = '';
                     if (p.motherId === id) p.motherId = '';
                 });
-                localStorage.setItem('familyTree', JSON.stringify(people));
+                try {
+                    localStorage.setItem('familyTree', JSON.stringify(people));
+                } catch (error) {
+                    console.error("Error saving data to localStorage:", error);
+                    alert('Failed to save data. Please check your browser settings.');
+                }
                 renderTree();
                 updateParentOptions();
             }
