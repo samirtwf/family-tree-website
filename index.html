@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <title>شجرة عائلة الرشيدي</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #f8f9fa, #e0f7fa);
+      direction: rtl;
+      text-align: center;
+      color: #004d40;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      margin: 20px;
+      font-size: 2.5em;
+      color: #00695c;
+      text-shadow: 1px 1px 2px #aaa;
+    }
+
+    .top-buttons {
+      margin-bottom: 10px;
+    }
+
+    .top-buttons button {
+      margin: 5px;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .top-buttons button:hover {
+      background-color: #004d40;
+    }
+
+    #treeWrapper {
+      overflow: auto;
+      width: 100%;
+      height: 600px;
+      border: 2px solid #26a69a;
+      direction: ltr;
+    }
+
+    #treeContainer {
+      width: max-content;
+      height: max-content;
+      transform-origin: top center;
+      transition: transform 0.3s ease;
+    }
+
+    .tree {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+      padding: 20px;
+      direction: rtl;
+    }
+
+    .person {
+      background-color: #ffffff;
+      padding: 10px;
+      border: 2px solid #80cbc4;
+      border-radius: 12px;
+      min-width: 180px;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .person:hover {
+      background-color: #f1f8e9;
+    }
+
+    .controls {
+      margin-top: 5px;
+    }
+
+    .person button {
+      margin: 2px;
+      font-size: 0.8em;
+      background-color: #00796b;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 4px 8px;
+    }
+
+    .person button:hover {
+      background-color: #004d40;
+    }
+
+    .children {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      position: relative;
+      margin-top: 20px;
+    }
+
+    .children::before {
+      content: "";
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      width: 2px;
+      height: 20px;
+      background-color: #26a69a;
+    }
+
+    .child-wrapper {
+      position: relative;
+    }
+
+    .child-wrapper::before {
+      content: "";
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      width: 2px;
+      height: 20px;
+      background-color: #26a69a;
+    }
+
+    form {
+      margin: 30px auto;
+      background: #ffffff;
+      padding: 20px;
+      width: 300px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      text-align: right;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    input:focus, select:focus {
+      border-color: #26a69a;
+      outline: none;
+    }
+
+    #searchInput {
+      width: 200px;
+      margin: 10px;
+      padding: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .highlight {
+      background-color: #c8e6c9 !important;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>شجرة عائلة الرشيدي</h1>
+
+  <div class="top-buttons">
+    <input id="searchInput" type="text" placeholder="ابحث عن اسم..." oninput="searchPerson()" />
+    <button onclick="zoomIn()">تكبير +</button>
+    <button onclick="zoomOut()">تصغير -</button>
+    <button onclick="resetZoom()">إعادة الحجم</button>
+    <button onclick="printTree()">طباعة</button>
+    <button onclick="exportToPDF()">تصدير PDF</button>
+    <button onclick="exportTree()">تصدير JSON</button>
+    <button onclick="document.getElementById('importFile').click()">استيراد</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importTree(event)" />
+  </div>
+
+  <div id="treeWrapper">
+    <div id="treeContainer">
+      <div id="tree" class="tree"></div>
+    </div>
+  </div>
+
+  <form id="addForm">
+    <input type="hidden" id="editId" />
+    <label>الاسم: <input type="text" id="name" required /></label>
+    <label>تاريخ الميلاد: <input type="date" id="birth" /></label>
+    <label>تاريخ الوفاة: <input type="date" id="death" /></label>
+    <label>الجنس:
+      <select id="gender">
+        <option value="ذكر">ذكر</option>
+        <option value="أنثى">أنثى</option>
+      </select>
+    </label>
+    <label>الوالد:
+      <select id="parentSelect">
+        <option value="">بدون والد</option>
+      </select>
+    </label>
+    <label>الوالدة:
+      <select id="motherSelect">
+        <option value="">بدون والدة</option>
+      </select>
+    </label>
+    <button type="submit">حفظ</button>
+  </form>
+
+  <script>
+    const people = JSON.parse(localStorage.getItem('familyTree') || '[]');
+    let scale = 1;
+
+    const tree = document.getElementById('tree');
+    const treeWrapper = document.getElementById('treeWrapper');
+
+    document.getElementById('addForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const editId = document.getElementById('editId').value;
+      const name = document.getElementById('name').value.trim();
+      const birth = document.getElementById('birth').value;
+      const death = document.getElementById('death').value;
+      const gender = document.getElementById('gender').value;
+      const parentId = document.getElementById('parentSelect').value;
+      const motherId = document.getElementById('motherSelect').value;
+
+      if (!name) return;
+
+      if (editId) {
+        const person = people.find(p => p.id === editId);
+        if (person) {
+          Object.assign(person, { name, birth, death, gender, parentId, motherId });
+        }
+      } else {
+        const person = {
+          id: Date.now().toString(),
+          name,
+          birth,
+          death,
+          gender,
+          parentId,
+          motherId
+        };
+        people.push(person);
+      }
+
+      localStorage.setItem('familyTree', JSON.stringify(people));
+      this.reset();
+      document.getElementById('editId').value = '';
+      renderTree();
+      updateParentOptions();
+    });
+
+    function renderTree() {
+      tree.innerHTML = '';
+      const roots = people.filter(p => !p.parentId && !p.motherId);
+      if (roots.length > 0) {
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.flexWrap = 'wrap';
+        row.style.gap = '20px';
+        row.style.justifyContent = 'center';
+
+        roots.forEach(root => {
+          const elem = createPersonElement(root);
+          row.appendChild(elem);
+        });
+        tree.appendChild(row);
+      }
+    }
+
+    function createPersonElement(person) {
+      const div = document.createElement('div');
+      div.className = 'person';
+      div.innerHTML = `<strong>${person.name}</strong><br><small>مواليد: ${person.birth || '-'} - وفاة: ${person.death || '-'}</small>`;
+
+      const controls = document.createElement('div');
+      controls.className = 'controls';
+      const editBtn = document.createElement('button');
+      editBtn.textContent = 'تعديل';
+      editBtn.onclick = () => loadEditForm(person);
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'حذف';
+      deleteBtn.onclick = () => deletePerson(person.id);
+      controls.appendChild(editBtn);
+      controls.appendChild(deleteBtn);
+      div.appendChild(controls);
+
+      const children = people.filter(p => p.parentId === person.id || p.motherId === person.id);
+      if (children.length > 0) {
+        const childContainer = document.createElement('div');
+        childContainer.className = 'children';
+
+        children.forEach(child => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'child-wrapper';
+          wrapper.appendChild(createPersonElement(child));
+          childContainer.appendChild(wrapper);
+        });
+
+        div.appendChild(childContainer);
+      }
+
+      return div;
+    }
+
+    function deletePerson(id) {
+      if (!confirm('هل أنت متأكد من الحذف؟')) return;
+      const index = people.findIndex(p => p.id === id);
+      if (index !== -1) {
+        people.splice(index, 1);
+        people.forEach(p => {
+          if (p.parentId === id) p.parentId = '';
+          if (p.motherId === id) p.motherId = '';
+        });
+        localStorage.setItem('familyTree', JSON.stringify(people));
+        renderTree();
+        updateParentOptions();
+      }
+    }
+
+    function loadEditForm(person) {
+      document.getElementById('editId').value = person.id;
+      document.getElementById('name').value = person.name;
+      document.getElementById('birth').value = person.birth;
+      document.getElementById('death').value = person.death;
+      document.getElementById('gender').value = person.gender;
+      document.getElementById('parentSelect').value = person.parentId || '';
+      document.getElementById('motherSelect').value = person.motherId || '';
+    }
+
+    function updateParentOptions() {
+      const parentSelect = document.getElementById('parentSelect');
+      const motherSelect = document.getElementById('motherSelect');
+      const editId = document.getElementById('editId').value;
+      parentSelect.innerHTML = '<option value="">بدون والد</option>';
+      motherSelect.innerHTML = '<option value="">بدون والدة</option>';
+
+      people.forEach(p => {
+        if (p.id !== editId) {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          parentSelect.appendChild(opt);
+          motherSelect.appendChild(opt.cloneNode(true));
+        }
+      });
+    }
+
+    function searchPerson() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const persons = document.querySelectorAll('.person');
+      persons.forEach(p => {
+        if (p.textContent.toLowerCase().includes(query)) {
+          p.classList.add('highlight');
+        } else {
+          p.classList.remove('highlight');
+        }
+      });
+    }
+
+    function printTree() {
+      window.print();
+    }
+
+    function exportTree() {
+      const blob = new Blob([JSON.stringify(people)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'family_tree.json';
+      a.click();
+    }
+
+    function importTree(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const imported = JSON.parse(event.target.result);
+          if (Array.isArray(imported)) {
+            localStorage.setItem('familyTree', JSON.stringify(imported));
+            location.reload();
+          }
+        } catch {
+          alert('حدث خطأ في تحميل الملف');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function exportToPDF() {
+      const element = document.getElementById('treeContainer');
+      const opt = {
+        margin: 0,
+        filename: 'family_tree.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function zoomIn() {
+      scale += 0.1;
+      document.getElementById('treeContainer').style.transform = `scale(${scale})`;
+    }
+
+    function zoomOut() {
+      scale = Math.max(0.2, scale - 0.1);
+      document.getElementById('treeContainer').style.transform = `scale(${scale})`;
+    }
+
+    function resetZoom() {
+      scale = 1;
+      document.getElementById('treeContainer').style.transform = `scale(${scale})`;
+    }
+
+    treeWrapper.addEventListener('wheel', function (e) {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        e.deltaY < 0 ? zoomIn() : zoomOut();
+      }
+    });
+
+    renderTree();
+    updateParentOptions();
+  </script>
+</body>
+</html>
