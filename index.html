@@ -218,35 +218,243 @@
         <button type="submit">حفظ</button>
     </form>
 
-   <script>
-    // البيانات مضمنة مباشرة هنا لتجنب مشاكل الوصول إلى الملف الخارجي
-    const initialData = [ ... ];
+    <script>
+        // البيانات مضمنة مباشرة هنا لتجنب مشاكل الوصول إلى الملف الخارجي
+        const initialData = [
+            { id: '1', name: 'محمود إبراهيم الفرس', birth: 'N/A', death: 'N/A', gender: 'ذكر', parentId: null, motherId: null },
+            { id: '2', name: 'بديعة', birth: 'N/A', death: 'N/A', gender: 'أنثى', parentId: null, motherId: null },
+            { id: '3', name: 'حنفي محمود الرشيدي', birth: 'N/A', death: 'N/A', gender: 'ذكر', parentId: '1', motherId: '2' },
+            { id: '4', name: 'عبد القادر', birth: 'N/A', death: 'N/A', gender: 'ذكر', parentId: '1', motherId: '2' },
+            { id: '5', name: 'احمد محمود ابراهيم الفرس', birth: 'N/A', death: 'N/A', gender: 'ذكر', parentId: '1', motherId: '2' },
+            { id: '6', name: 'عطيه محمود ابراهيم الفرس', birth: 'N/A', death: 'N/A', gender: 'ذكر', parentId: '1', motherId: '2' },
+            { id: '7', name: 'فريحة محمود ابراهيم الفرس', birth: 'N/A', death: 'N/A', gender: 'أنثى', parentId: '1', motherId: '2' },
+            { id: '8', name: 'فاطمة ابنه حنفي محمود الرشيدي', birth: 'N/A', death: 'N/A', gender: 'أنثى', parentId: '3', motherId: null },
+            { id: '9', name: 'محمد الرشيدي حنفي محمود الرشيدي', birth: 'N/A', death: 'N/A', gender: 'ذكر', parentId: '3', motherId: null },
+            { id: '10', name: 'زينب حنفي محمود الرشيدي', birth: '01-01-1960', death: 'N/A', gender: 'أنثى', parentId: '3', motherId: null }
+        ];
 
-    let people = [];
-    let scale = 1;
+        let people = JSON.parse(localStorage.getItem('familyTree')) || initialData;
+        let scale = 1;
 
-    const tree = document.getElementById('tree');
-    const treeWrapper = document.getElementById('treeWrapper');
+        const tree = document.getElementById('tree');
+        const treeWrapper = document.getElementById('treeWrapper');
 
-    // جلب البيانات من GitHub
-    async function fetchDataAndProcessData() {
-        try {
-            const response = await fetch('https://raw.githubusercontent.com/samirtwf/family-tree-website/main/family_tree.json');
-            if (!response.ok) throw new Error('Network response was not ok');
-            people = await response.json();
-        } catch (err) {
-            // fallback للبيانات القديمة أو localStorage
-            people = JSON.parse(localStorage.getItem('familyTree')) || initialData;
+        function fetchDataAndProcessData() {
+            renderTree();
+            updateParentOptions();
         }
-        renderTree();
-        updateParentOptions();
-    }
 
-    // ... باقي الكود كما هو ...
+        document.getElementById('addForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const editId = document.getElementById('editId').value;
+            const name = document.getElementById('name').value.trim();
+            const birth = document.getElementById('birth').value;
+            const death = document.getElementById('death').value;
+            const gender = document.getElementById('gender').value;
+            const parentId = document.getElementById('parentSelect').value;
+            const motherId = document.getElementById('motherSelect').value;
 
-    // استدعاء الدالة لجلب البيانات عند تحميل الصفحة
-    fetchDataAndProcessData();
-</script>
+            if (!name) return;
 
+            if (editId) {
+                const person = people.find(p => p.id === editId);
+                if (person) {
+                    Object.assign(person, { name, birth, death, gender, parentId, motherId });
+                }
+            } else {
+                const person = {
+                    id: Date.now().toString(),
+                    name,
+                    birth,
+                    death,
+                    gender,
+                    parentId,
+                    motherId
+                };
+                people.push(person);
+            }
+
+            localStorage.setItem('familyTree', JSON.stringify(people));
+            this.reset();
+            document.getElementById('editId').value = '';
+            renderTree();
+            updateParentOptions();
+        });
+
+        function renderTree() {
+            tree.innerHTML = '';
+            const roots = people.filter(p => !p.parentId && !p.motherId);
+            if (roots.length > 0) {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.flexWrap = 'wrap';
+                row.style.gap = '20px';
+                row.style.justifyContent = 'center';
+
+                roots.forEach(root => {
+                    const elem = createPersonElement(root);
+                    row.appendChild(elem);
+                });
+                tree.appendChild(row);
+            }
+        }
+
+        function createPersonElement(person) {
+            const div = document.createElement('div');
+            div.className = 'person';
+            div.innerHTML = `<strong>${person.name}</strong><br><small>مواليد: ${person.birth || '-'} - وفاة: ${person.death || '-'}</small>`;
+
+            const controls = document.createElement('div');
+            controls.className = 'controls';
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'تعديل';
+            editBtn.onclick = () => loadEditForm(person);
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'حذف';
+            deleteBtn.onclick = () => deletePerson(person.id);
+            controls.appendChild(editBtn);
+            controls.appendChild(deleteBtn);
+            div.appendChild(controls);
+
+            const children = people.filter(p => p.parentId === person.id || p.motherId === person.id);
+            if (children.length > 0) {
+                const childContainer = document.createElement('div');
+                childContainer.className = 'children';
+
+                children.forEach(child => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'child-wrapper';
+                    wrapper.appendChild(createPersonElement(child));
+                    childContainer.appendChild(wrapper);
+                });
+
+                div.appendChild(childContainer);
+            }
+
+            return div;
+        }
+
+        function deletePerson(id) {
+            if (!confirm('هل أنت متأكد من الحذف؟')) return;
+            const index = people.findIndex(p => p.id === id);
+            if (index !== -1) {
+                people.splice(index, 1);
+                people.forEach(p => {
+                    if (p.parentId === id) p.parentId = '';
+                    if (p.motherId === id) p.motherId = '';
+                });
+                localStorage.setItem('familyTree', JSON.stringify(people));
+                renderTree();
+                updateParentOptions();
+            }
+        }
+
+        function loadEditForm(person) {
+            document.getElementById('editId').value = person.id;
+            document.getElementById('name').value = person.name;
+            document.getElementById('birth').value = person.birth;
+            document.getElementById('death').value = person.death;
+            document.getElementById('gender').value = person.gender;
+            document.getElementById('parentSelect').value = person.parentId || '';
+            document.getElementById('motherSelect').value = person.motherId || '';
+        }
+
+        function updateParentOptions() {
+            const parentSelect = document.getElementById('parentSelect');
+            const motherSelect = document.getElementById('motherSelect');
+            const editId = document.getElementById('editId').value;
+            parentSelect.innerHTML = '<option value="">بدون والد</option>';
+            motherSelect.innerHTML = '<option value="">بدون والدة</option>';
+
+            people.forEach(p => {
+                if (p.id !== editId) {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    parentSelect.appendChild(opt);
+                    motherSelect.appendChild(opt.cloneNode(true));
+                }
+            });
+        }
+
+        function searchPerson() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const persons = document.querySelectorAll('.person');
+            persons.forEach(p => {
+                if (p.textContent.toLowerCase().includes(query)) {
+                    p.classList.add('highlight');
+                } else {
+                    p.classList.remove('highlight');
+                }
+            });
+        }
+
+        function printTree() {
+            window.print();
+        }
+
+        function exportTree() {
+            const blob = new Blob([JSON.stringify(people)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'family_tree.json';
+            a.click();
+        }
+
+        function importTree(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    if (Array.isArray(imported)) {
+                        localStorage.setItem('familyTree', JSON.stringify(imported));
+                        location.reload();
+                    }
+                } catch {
+                    alert('حدث خطأ في تحميل الملف');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function exportToPDF() {
+            const element = document.getElementById('treeContainer');
+            const opt = {
+                margin: 0,
+                filename: 'family_tree.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        function zoomIn() {
+            scale += 0.1;
+            document.getElementById('treeContainer').style.transform = `scale(${scale})`;
+        }
+
+        function zoomOut() {
+            scale = Math.max(0.2, scale - 0.1);
+            document.getElementById('treeContainer').style.transform = `scale(${scale})`;
+        }
+
+        function resetZoom() {
+            scale = 1;
+            document.getElementById('treeContainer').style.transform = `scale(${scale})`;
+        }
+
+        treeWrapper.addEventListener('wheel', function (e) {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                e.deltaY < 0 ? zoomIn() : zoomOut();
+            }
+        });
+
+        // استدعاء الدالة لجلب البيانات عند تحميل الصفحة
+        fetchDataAndProcessData();
+    </script>
 </body>
 </html>
